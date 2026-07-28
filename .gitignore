@@ -1,0 +1,6 @@
+.env
+.DS_Store
+.pytest_cache/
+__pycache__/
+*.py[cod]
+mcp_env/
