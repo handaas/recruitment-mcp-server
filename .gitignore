@@ -1,6 +1,7 @@
-.env
-.DS_Store
-.pytest_cache/
 __pycache__/
 *.py[cod]
+*.egg-info/
+.venv/
 mcp_env/
+.env
+.DS_Store
