@@ -48,6 +48,7 @@ class ToolTests(TestCase):
         self.assertEqual(
             {tool.name for tool in tools},
             {
+                "recruitment_enterprise_search",
                 "recruitment_job_search",
                 "recruitment_employer_profile",
                 "recruitment_demand_analysis",
@@ -59,6 +60,24 @@ class ToolTests(TestCase):
             self.assertEqual(tool.outputSchema.get("type"), "object")
             self.assertTrue(tool.annotations.readOnlyHint)
             self.assertFalse(tool.annotations.destructiveHint)
+
+    def test_enterprise_search_resolves_abbreviated_company_names(self) -> None:
+        with patch.object(
+            server,
+            "call_api",
+            return_value={"total": 1, "resultList": [{"name": "企业A全称"}]},
+        ) as call:
+            result = server.recruitment_enterprise_search("企业A", pageSize=5)
+        self.assertEqual(result["total"], 1)
+        call.assert_called_once_with(
+            server.PRODUCT_IDS["enterprise_search"],
+            {"matchKeyword": "企业A", "pageIndex": 1, "pageSize": 5},
+        )
+
+        with patch.object(server, "call_api") as call:
+            invalid = server.recruitment_enterprise_search("企业A", pageSize=51)
+        self.assertEqual(invalid["parameter"], "pageSize")
+        call.assert_not_called()
 
     def test_job_search_and_salary_reuse_details(self) -> None:
         expected_params = {
@@ -78,6 +97,36 @@ class ToolTests(TestCase):
                     server.PRODUCT_IDS["recruitment_details"],
                     expected_params,
                 )
+
+    def test_sensitive_recruitment_source_fields_are_removed(self) -> None:
+        upstream = {
+            "total": 1,
+            "recruitingSources": ["sensitive-summary-source"],
+            "resultList": [
+                {
+                    "recruitingName": "测试岗位",
+                    "recruitingSource": "sensitive-detail-source",
+                    "nested": {
+                        "recruitmentSource": "sensitive-nested-source",
+                    },
+                }
+            ],
+        }
+        with patch.object(server, "call_api", return_value=upstream):
+            result = server.recruitment_job_search("企业A")
+
+        self.assertEqual(
+            result,
+            {
+                "total": 1,
+                "resultList": [
+                    {
+                        "recruitingName": "测试岗位",
+                        "nested": {},
+                    }
+                ],
+            },
+        )
 
     def test_profile_and_trend_reuse_statistics(self) -> None:
         statistics = {
@@ -166,3 +215,21 @@ class ToolTests(TestCase):
                     result = function("企业A", listLimit=201)
                 self.assertEqual(result["parameter"], "listLimit")
                 call.assert_not_called()
+
+
+class DocumentationTests(TestCase):
+    def test_readme_documents_enterprise_search_first(self) -> None:
+        readme = (SERVER_PATH.parents[1] / "README.md").read_text(encoding="utf-8")
+        self.assertIn("`recruitment_enterprise_search`", readme)
+        self.assertIn("`675cea1f0e009a9ea37edaa1`", readme)
+        self.assertIn("企业简称无法直接查询时", readme)
+
+    def test_public_tool_docs_do_not_describe_recruitment_sources(self) -> None:
+        readme = (SERVER_PATH.parents[1] / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("招聘来源", readme)
+        self.assertNotIn("招聘渠道", readme)
+
+        tools = asyncio.run(server.mcp.list_tools())
+        public_descriptions = "\n".join(tool.description or "" for tool in tools)
+        self.assertNotIn("招聘来源", public_descriptions)
+        self.assertNotIn("招聘渠道", public_descriptions)

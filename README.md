@@ -1,9 +1,10 @@
 # 招聘大数据服务
 
-[该 MCP 服务提供职位检索、雇主招聘画像、人才需求、职位薪酬和招聘趋势分析能力，帮助用户开展人才市场研究、雇主分析和招聘决策。](https://www.handaas.com/)
+[该 MCP 服务提供企业关键词搜索、职位检索、雇主招聘画像、人才需求、职位薪酬和招聘趋势分析能力，帮助用户开展人才市场研究、雇主分析和招聘决策。](https://www.handaas.com/)
 
 ## 主要功能
 
+- 🏢 企业简称与关键词搜索
 - 🔍 企业招聘职位检索
 - 🏢 雇主招聘画像分析
 - 👥 企业人才需求分析
@@ -12,7 +13,8 @@
 
 ## 服务设计说明
 
-- 服务按实际业务场景提供 5 个 Tool，不按上游 API 数量平铺工具。
+- 服务按实际业务场景提供 6 个 Tool，不按上游 API 数量平铺工具。
+- 用户只提供企业简称时，先用 `recruitment_enterprise_search` 获取企业全称或稳定 ID。
 - 招聘明细和招聘统计两个 Product ID 由不同场景 Tool 复用。
 - `recruitment_demand_analysis` 通过 `view` 选择明细或统计，单次只访问一个 Product ID。
 - 翻页结果的业务外层只包含 `total` 与 `resultList`，`pageSize` 最大为 50。
@@ -112,6 +114,7 @@ python server/mcp_server.py streamable-http
 
 | MCP Tool | 功能或视图 | Product ID |
 |---|---|---|
+| `recruitment_enterprise_search` | 企业简称、品牌或产品关键词查询企业 | `675cea1f0e009a9ea37edaa1` |
 | `recruitment_job_search` | 企业招聘职位明细 | `66b338e274bf098447db7f09` |
 | `recruitment_employer_profile` | 企业招聘画像与统计 | `66b338e274bf098447db7f1b` |
 | `recruitment_demand_analysis` | `view=details` 人才需求明细 | `66b338e274bf098447db7f09` |
@@ -119,7 +122,15 @@ python server/mcp_server.py streamable-http
 | `recruitment_salary` | 职位薪酬范围明细 | `66b338e274bf098447db7f09` |
 | `recruitment_trend` | 招聘数量、近三月统计、更新频率和平均薪资 | `66b338e274bf098447db7f1b` |
 
-### 1. recruitment_job_search
+### 1. recruitment_enterprise_search
+
+**功能**：按企业简称、品牌、产品或其他关键词搜索候选企业。
+
+**主要参数**：`matchKeyword` 必需；`pageIndex` 默认 1；`pageSize` 默认 10、最大 50。
+
+**返回**：候选企业 `total/resultList`。确认候选后，把企业全称、企业 ID 或统一社会信用代码传给招聘 Tool。
+
+### 2. recruitment_job_search
 
 **功能**：查询指定企业的招聘职位明细。
 
@@ -130,9 +141,9 @@ python server/mcp_server.py streamable-http
 - `pageIndex`（可选）：页码，从 1 开始。
 - `pageSize`（可选）：每页数量，默认 50，最大 50。
 
-**返回**：`total` 和 `resultList`；职位明细可包含职位名称、城市、学历、薪酬、工作年限和招聘渠道等字段。
+**返回**：`total` 和 `resultList`；职位明细可包含职位名称、城市、学历、薪酬、工作年限、发布时间和工作地址等字段。
 
-### 2. recruitment_employer_profile
+### 3. recruitment_employer_profile
 
 **功能**：查询企业招聘画像，包括福利、招聘城市、岗位关键词和平均薪资。
 
@@ -144,7 +155,7 @@ python server/mcp_server.py streamable-http
 
 **返回**：企业招聘统计和画像；发生列表截断时返回 `truncatedFields`。
 
-### 3. recruitment_demand_analysis
+### 4. recruitment_demand_analysis
 
 **功能**：分析企业人才需求，可选择岗位明细或企业统计视图。
 
@@ -158,7 +169,7 @@ python server/mcp_server.py streamable-http
 
 **返回**：明细视图返回 `total` 和 `resultList`；统计视图返回企业招聘画像和统计字段。
 
-### 4. recruitment_salary
+### 5. recruitment_salary
 
 **功能**：查询企业招聘职位的薪酬范围，用于岗位和人才市场薪酬比较。
 
@@ -171,7 +182,7 @@ python server/mcp_server.py streamable-http
 
 **返回**：`total` 和 `resultList`；`workingSalary` 可包含币种、最低薪酬和最高薪酬。
 
-### 5. recruitment_trend
+### 6. recruitment_trend
 
 **功能**：查询企业招聘趋势概览，不返回逐月时间序列。
 
@@ -190,22 +201,28 @@ python server/mcp_server.py streamable-http
 
 ## 使用场景
 
-1. **人才需求研究**：查看目标企业正在招聘的岗位和人才方向。
-2. **雇主分析**：了解企业招聘城市、福利、岗位关键词和招聘活跃度。
-3. **薪酬比较**：比较不同企业或岗位的薪酬区间。
-4. **招聘趋势判断**：分析当前及近三月招聘规模和平均更新频率。
-5. **竞争情报**：从招聘需求变化判断企业业务扩张方向。
+1. **企业定位**：通过简称或品牌词确认企业全称与稳定标识。
+2. **人才需求研究**：查看目标企业正在招聘的岗位和人才方向。
+3. **雇主分析**：了解企业招聘城市、福利、岗位关键词和招聘活跃度。
+4. **薪酬比较**：比较不同企业或岗位的薪酬区间。
+5. **招聘趋势判断**：分析当前及近三月招聘规模和平均更新频率。
+6. **竞争情报**：从招聘需求变化判断企业业务扩张方向。
 
 ## 使用注意事项
 
-1. **企业全称**：使用企业名称查询时建议提供工商登记全称。
-2. **企业标识**：企业名称不唯一时，建议使用企业 ID 或统一社会信用代码。
+1. **简称处理**：企业简称无法直接查询时，先调用 `recruitment_enterprise_search`。
+2. **企业标识**：确认候选后，建议使用企业 ID 或统一社会信用代码。
 3. **分页限制**：`pageIndex` 从 1 开始，`pageSize` 必须在 1 到 50 之间。
 4. **列表限制**：`listLimit` 必须在 1 到 200 之间。
 5. **视图选择**：需要岗位记录时使用 `view=details`；需要汇总画像时使用 `view=statistics`。
 6. **趋势口径**：`recruitment_trend` 是当前和近三月概览，不是逐月时间序列。
 
 ## 使用提问示例
+
+### recruitment_enterprise_search（企业关键词搜索）
+
+1. “小米”对应哪家企业？
+2. 通过“京东”查找准确企业名称和企业 ID。
 
 ### recruitment_job_search（招聘职位检索）
 
