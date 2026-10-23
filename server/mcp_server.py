@@ -16,7 +16,7 @@ from mcp.types import ToolAnnotations
 load_dotenv()
 
 mcp = FastMCP(
-    "招聘大数据",
+    "企业用人需求洞察",
     instructions=(
         "面向企业简称解析、职位检索、雇主招聘画像、人才需求、薪酬和招聘趋势分析。"
         "同一 Product ID 可由不同场景工具复用，但单次调用只访问一个上游接口。"
